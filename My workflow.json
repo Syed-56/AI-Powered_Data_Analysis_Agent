@@ -3,40 +3,8 @@
   "nodes": [
     {
       "parameters": {
-        "formTitle": "AI Data Analysis Portal",
-        "formDescription": "Your file is being Analyzed, will be emailed soon.",
-        "formFields": {
-          "values": [
-            {
-              "fieldLabel": "Email Address",
-              "fieldType": "email",
-              "requiredField": true
-            },
-            {
-              "fieldLabel": "Upload CSV file",
-              "fieldType": "file",
-              "requiredField": true
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.formTrigger",
-      "typeVersion": 2.5,
-      "position": [
-        0,
-        0
-      ],
-      "id": "8d55fcb3-cc1e-46a5-8f5b-06d0717840d6",
-      "name": "Email and File Input",
-      "webhookId": "c747ea24-d3ee-4a5b-b742-b129387744bf",
-      "alwaysOutputData": false,
-      "executeOnce": true
-    },
-    {
-      "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:5000/analyze",
+        "url": "http://localhost:5000/analyze",
         "sendBody": true,
         "contentType": "multipart-form-data",
         "bodyParameters": {
@@ -56,7 +24,7 @@
         272,
         0
       ],
-      "id": "54e39019-9983-4c3a-9b2e-a615739accbe",
+      "id": "eab393f0-3e63-4c96-acc6-32c4404224c3",
       "name": "Send to Python via Flask"
     },
     {
@@ -83,20 +51,20 @@
         576,
         0
       ],
-      "id": "adcf9a01-b6c0-4b98-ae96-90af0e891bba",
+      "id": "02d6f89e-48b4-4124-8fbf-5064c718ae03",
       "name": "Generate Report via Gemini",
       "retryOnFail": true,
       "waitBetweenTries": 3000,
       "credentials": {
         "googlePalmApi": {
-          "id": "Pgr7GEFSqPxyKvW8",
+          "id": "OmxIzTSHFI9uDaXJ",
           "name": "Google Gemini(PaLM) Api account"
         }
       }
     },
     {
       "parameters": {
-        "sendTo": "={{ $('Email and File Input').item.json['Email Address'] }}",
+        "sendTo": "={{ $('Webhook').item.json.body['Email Address'] }}",
         "subject": "Report of Business Analysis wrt Data file",
         "message": "=Here is the desired pdf report of analysis on your data",
         "options": {
@@ -113,12 +81,12 @@
         1520,
         16
       ],
-      "id": "df66bb2e-22af-40c2-bb14-7eb5629a94d2",
+      "id": "3dba6568-ec29-41bc-9c83-538ed4e2d2f2",
       "name": "Send a message",
       "webhookId": "7c038ceb-c103-47fb-872a-a068f7c9f1e2",
       "credentials": {
         "gmailOAuth2": {
-          "id": "9ViRaKLogg4RWLk3",
+          "id": "ZZ2NoFGL847ro9Py",
           "name": "Gmail account"
         }
       }
@@ -137,13 +105,13 @@
         1216,
         160
       ],
-      "id": "6c857b8a-a683-49c9-bfa7-b26c07e6a4ec",
+      "id": "3dd1f7a0-b333-45e9-9a70-f8157f6db486",
       "name": "Convert to File"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://host.docker.internal:5000/generate-pdf",
+        "url": "http://localhost:5000/generate-pdf",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
@@ -165,23 +133,30 @@
         1008,
         160
       ],
-      "id": "bc58bd3c-ba30-4a65-a7f5-d5e55882bc55",
+      "id": "445a5cbb-1741-49ac-8fea-e0d6ae3b03ab",
       "name": "Generate PDF "
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "8fb46f83-d54f-453a-a51c-5e820828a5d8",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2c994ff8-cad6-45d3-8429-d0f94f2c23c3",
+      "name": "Webhook",
+      "webhookId": "8fb46f83-d54f-453a-a51c-5e820828a5d8"
     }
   ],
   "pinData": {},
   "connections": {
-    "Email and File Input": {
-      "main": [
-        [
-          {
-            "node": "Send to Python via Flask",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Send to Python via Flask": {
       "main": [
         [
@@ -225,18 +200,29 @@
           }
         ]
       ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send to Python via Flask",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "be731c0c-6d4c-4f12-be25-9ccb5d9bb729",
+  "versionId": "4e758383-003b-48a5-96f7-dd76eeff7c02",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "bd9dff49008684b25f47079765a7cbe1e8d6f5309855d46b369c07dc08fd6399"
+    "instanceId": "9fdb03835d3564909db6234dbe03e482201d3db680e27eccfc7f4256963e1082"
   },
-  "id": "78EulXPv6jIS6lEb",
+  "id": "Der9jBNAiBUAeiLc",
   "tags": []
 }
