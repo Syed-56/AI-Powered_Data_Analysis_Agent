@@ -124,21 +124,6 @@ n8n handles data routing, HTTP communication between services, conditional branc
 
 ---
 
-## 📁 Project Structure
-
-```
-ai-data-analysis-agent/
-├── app.py                  # Flask entry point
-├── analyzer.py             # Statistical analysis logic
-├── requirements.txt        # Python dependencies
-├── n8n_workflow.json       # Exported n8n workflow
-├── prompts/
-│   └── gemini_prompt.txt   # Gemini system prompt template
-└── README.md
-```
-
----
-
 ## 📚 References
 
 - [n8n Documentation](https://docs.n8n.io)
