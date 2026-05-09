@@ -11,6 +11,7 @@
         body { background-color: #f1f5f9; font-family: 'Plus Jakarta Sans', sans-serif; }
         .step-active { color: #2563eb; font-weight: 800; transform: scale(1.05); }
         .step-done { color: #10b981; }
+        .step-error { color: #ef4444; }
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #2563eb;
@@ -31,7 +32,8 @@
         </div>
 
         <div id="formArea" class="p-10">
-            <form id="analysisForm" class="space-y-8">
+            <div id="errorBanner" class="hidden mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 font-semibold text-sm"></div>
+            <div class="space-y-8">
                 <div>
                     <label class="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Recipient Email</label>
                     <input type="email" id="emailInput" required
@@ -46,10 +48,11 @@
                         <p id="fileNameDisplay" class="text-gray-500 font-semibold">Click to select CSV data</p>
                     </div>
                 </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-200 transition-all transform hover:-translate-y-1 active:scale-95 text-xl tracking-tight">
+                <button onclick="startPipeline()"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-200 transition-all transform hover:-translate-y-1 active:scale-95 text-xl tracking-tight">
                     START AI PIPELINE
                 </button>
-            </form>
+            </div>
         </div>
 
         <div id="statusArea" class="p-10 hidden">
@@ -79,58 +82,106 @@
                 <p class="text-green-700">Check your inbox for the analysis.</p>
                 <button onclick="location.reload()" class="mt-8 text-blue-600 font-bold hover:underline">New Analysis</button>
             </div>
+
+            <div id="errorBox" class="mt-12 p-8 bg-red-50 rounded-3xl border border-red-100 text-center hidden">
+                <i class="fas fa-times-circle text-5xl text-red-500 mb-4"></i>
+                <h3 class="text-2xl font-black text-red-900">Pipeline Failed</h3>
+                <p id="errorMsg" class="text-red-700 mt-2">An error occurred.</p>
+                <button onclick="location.reload()" class="mt-8 text-blue-600 font-bold hover:underline">Try Again</button>
+            </div>
         </div>
     </div>
 
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const fileNameDisplay = document.getElementById('fileNameDisplay');
-        const form = document.getElementById('analysisForm');
+        //N8N WEBHOOK URL
+        const WEBHOOK_URL = 'http://localhost:5678/webhook/8fb46f83-d54f-453a-a51c-5e820828a5d8';
 
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) fileNameDisplay.textContent = e.target.files[0].name;
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0)
+                document.getElementById('fileNameDisplay').textContent = e.target.files[0].name;
         });
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const webhookUrl = 'http://localhost:5678/webhook/8fb46f83-d54f-453a-a51c-5e820828a5d8'; 
-            
+        const delay = ms => new Promise(r => setTimeout(r, ms));
+
+        function updateStep(id, status) {
+            const row = document.getElementById(`step${id}`);
+            const icon = row.querySelector('.icon-box');
+            row.classList.remove('step-active', 'step-done', 'step-error');
+            if (status === 'active') {
+                row.classList.add('step-active');
+                icon.innerHTML = '<div class="loader"></div>';
+            } else if (status === 'done') {
+                row.classList.add('step-done');
+                icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+            } else if (status === 'error') {
+                row.classList.add('step-error');
+                icon.innerHTML = '<i class="fas fa-times-circle"></i>';
+            }
+        }
+
+        function showBannerError(msg) {
+            const b = document.getElementById('errorBanner');
+            b.textContent = msg;
+            b.classList.remove('hidden');
+        }
+
+        async function startPipeline() {
+            const email = document.getElementById('emailInput').value.trim();
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            document.getElementById('errorBanner').classList.add('hidden');
+
+            if (!email)  { showBannerError('Please enter a recipient email.'); return; }
+            if (!file)   { showBannerError('Please select a CSV file.'); return; }
+
+            // Show status panel
             document.getElementById('formArea').classList.add('hidden');
             document.getElementById('statusArea').classList.remove('hidden');
 
-            const updateStep = (id, status) => {
-                const row = document.getElementById(`step${id}`);
-                const icon = row.querySelector('.icon-box');
-                if(status === 'active') {
-                    row.classList.add('step-active');
-                    icon.innerHTML = '<div class="loader"></div>';
-                } else if(status === 'done') {
-                    row.classList.remove('step-active');
-                    row.classList.add('step-done');
-                    icon.innerHTML = '<i class="fas fa-check-circle"></i>';
-                }
-            };
+            // Build multipart payload
+            const fd = new FormData();
+            fd.append('Email Address', email);
+            fd.append('Upload_CSV_file', file, file.name);
 
-            const runUI = async () => {
-                for(let i=1; i<=4; i++) {
-                    updateStep(i, 'active');
-                    await new Promise(r => setTimeout(r, 2500));
-                    updateStep(i, 'done');
+            updateStep(1, 'active');
+
+            try {
+                // Send to n8n webhook
+                const response = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+
+                if (!response.ok) {
+                    throw new Error(`n8n returned HTTP ${response.status}. Make sure the workflow is active.`);
                 }
+
+                updateStep(1, 'done');
+
+                // n8n processes the rest asynchronously
+                updateStep(2, 'active');
+                await delay(10000);  // Flask analysis
+                updateStep(2, 'done');
+
+                updateStep(3, 'active');
+                await delay(15000);  // Gemini report generation
+                updateStep(3, 'done');
+
+                updateStep(4, 'active');
+                await delay(10000);  // Gmail send
+                updateStep(4, 'done');
+
                 document.getElementById('successBox').classList.remove('hidden');
-            };
 
-            if(webhookUrl && webhookUrl !== 'PASTE_YOUR_PRODUCTION_URL_HERE') {
-                const fd = new FormData();
-                fd.append('Email Address', document.getElementById('emailInput').value);
-                fd.append('Upload_CSV_file', fileInput.files[0]);
-                fetch(webhookUrl, { method: 'POST', body: fd }).then(() => runUI());
-            } else {
-                alert("Please paste your Webhook URL into the code first!");
-                location.reload();
+            } catch (err) {
+                // Mark the currently active step as failed
+                for (let i = 1; i <= 4; i++) {
+                    if (document.getElementById(`step${i}`).classList.contains('step-active'))
+                        updateStep(i, 'error');
+                }
+                document.getElementById('errorMsg').textContent =
+                    err.message || 'Could not reach n8n. Is it running on port 5678?';
+                document.getElementById('errorBox').classList.remove('hidden');
             }
-        });
+        }
     </script>
 </body>
 </html>
