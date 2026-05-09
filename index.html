@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Data Analysis Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { background-color: #f1f5f9; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .step-active { color: #2563eb; font-weight: 800; transform: scale(1.05); }
+        .step-done { color: #10b981; }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100">
+        <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-12 text-white text-center">
+            <h1 class="text-4xl font-black mb-2 tracking-tight uppercase">AI Data Analyst</h1>
+            <p class="text-blue-100 font-medium opacity-80">Statistical Intelligence & Automated Reporting</p>
+        </div>
+
+        <div id="formArea" class="p-10">
+            <form id="analysisForm" class="space-y-8">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Recipient Email</label>
+                    <input type="email" id="emailInput" required
+                        class="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none transition-all text-lg font-medium"
+                        placeholder="Enter your email...">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Dataset Source (CSV)</label>
+                    <div class="border-2 border-dashed border-gray-200 rounded-3xl p-12 text-center hover:border-blue-400 transition-all cursor-pointer bg-gray-50 group relative">
+                        <input id="fileInput" type="file" accept=".csv" class="absolute inset-0 opacity-0 cursor-pointer" required>
+                        <i class="fas fa-upload text-5xl text-blue-400 mb-4 group-hover:scale-110 transition-transform"></i>
+                        <p id="fileNameDisplay" class="text-gray-500 font-semibold">Click to select CSV data</p>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 rounded-2xl shadow-xl shadow-blue-200 transition-all transform hover:-translate-y-1 active:scale-95 text-xl tracking-tight">
+                    START AI PIPELINE
+                </button>
+            </form>
+        </div>
+
+        <div id="statusArea" class="p-10 hidden">
+            <h2 class="text-2xl font-black text-gray-800 mb-10 text-center uppercase tracking-widest">Pipeline Status</h2>
+            <div class="space-y-10">
+                <div id="step1" class="flex items-center text-gray-300 transition-all duration-500">
+                    <div class="w-14 text-center text-3xl icon-box"><i class="fas fa-file-import"></i></div>
+                    <span class="text-xl font-bold ml-4">Ingesting Data</span>
+                </div>
+                <div id="step2" class="flex items-center text-gray-300 transition-all duration-500">
+                    <div class="w-14 text-center text-3xl icon-box"><i class="fab fa-python"></i></div>
+                    <span class="text-xl font-bold ml-4">Stats Engine (Flask)</span>
+                </div>
+                <div id="step3" class="flex items-center text-gray-300 transition-all duration-500">
+                    <div class="w-14 text-center text-3xl icon-box"><i class="fas fa-brain"></i></div>
+                    <span class="text-xl font-bold ml-4">Gemini Insights</span>
+                </div>
+                <div id="step4" class="flex items-center text-gray-300 transition-all duration-500">
+                    <div class="w-14 text-center text-3xl icon-box"><i class="fas fa-envelope"></i></div>
+                    <span class="text-xl font-bold ml-4">Mailing PDF Report</span>
+                </div>
+            </div>
+
+            <div id="successBox" class="mt-12 p-8 bg-green-50 rounded-3xl border border-green-100 text-center hidden">
+                <i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i>
+                <h3 class="text-2xl font-black text-green-900">Report Sent!</h3>
+                <p class="text-green-700">Check your inbox for the analysis.</p>
+                <button onclick="location.reload()" class="mt-8 text-blue-600 font-bold hover:underline">New Analysis</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const form = document.getElementById('analysisForm');
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) fileNameDisplay.textContent = e.target.files[0].name;
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const webhookUrl = 'http://localhost:5678/webhook/8fb46f83-d54f-453a-a51c-5e820828a5d8'; 
+            
+            document.getElementById('formArea').classList.add('hidden');
+            document.getElementById('statusArea').classList.remove('hidden');
+
+            const updateStep = (id, status) => {
+                const row = document.getElementById(`step${id}`);
+                const icon = row.querySelector('.icon-box');
+                if(status === 'active') {
+                    row.classList.add('step-active');
+                    icon.innerHTML = '<div class="loader"></div>';
+                } else if(status === 'done') {
+                    row.classList.remove('step-active');
+                    row.classList.add('step-done');
+                    icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                }
+            };
+
+            const runUI = async () => {
+                for(let i=1; i<=4; i++) {
+                    updateStep(i, 'active');
+                    await new Promise(r => setTimeout(r, 2500));
+                    updateStep(i, 'done');
+                }
+                document.getElementById('successBox').classList.remove('hidden');
+            };
+
+            if(webhookUrl && webhookUrl !== 'PASTE_YOUR_PRODUCTION_URL_HERE') {
+                const fd = new FormData();
+                fd.append('Email Address', document.getElementById('emailInput').value);
+                fd.append('Upload_CSV_file', fileInput.files[0]);
+                fetch(webhookUrl, { method: 'POST', body: fd }).then(() => runUI());
+            } else {
+                alert("Please paste your Webhook URL into the code first!");
+                location.reload();
+            }
+        });
+    </script>
+</body>
+</html>
